@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="id" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CipherLab{% endblock %} — Simulasi Kriptografi Edukatif</title>
+
+  <!-- Bootstrap 5.3 -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous" />
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+
+  <!-- Google Fonts: Syne (display) + Outfit (body) + JetBrains Mono (code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+
+  <style>
+    /* ── CSS Custom Properties ──────────────────────────────── */
+    :root {
+      --cl-accent:        #06d6a0;
+      --cl-accent-dim:    rgba(6, 214, 160, 0.12);
+      --cl-accent-glow:   rgba(6, 214, 160, 0.30);
+      --cl-font-display:  'Syne', sans-serif;
+      --cl-font-body:     'Outfit', sans-serif;
+      --cl-font-mono:     'JetBrains Mono', monospace;
+      --cl-radius:        12px;
+      --cl-radius-sm:     8px;
+      --cl-transition:    0.22s ease;
+    }
+
+    /* ── Dark Theme ─────────────────────────────────────────── */
+    [data-bs-theme="dark"] {
+      --cl-bg:            #0d1117;
+      --cl-surface:       #161b22;
+      --cl-surface-2:     #21262d;
+      --cl-border:        rgba(255,255,255,0.08);
+      --cl-text:          #e6edf3;
+      --cl-text-muted:    #8b949e;
+      --cl-nav-bg:        rgba(13,17,23,0.88);
+      --cl-shadow:        0 8px 32px rgba(0,0,0,0.45);
+      --cl-result-bg:     rgba(6, 214, 160, 0.07);
+    }
+
+    /* ── Light Theme ─────────────────────────────────────────── */
+    [data-bs-theme="light"] {
+      --cl-bg:            #f4f6f9;
+      --cl-surface:       #ffffff;
+      --cl-surface-2:     #f0f2f5;
+      --cl-border:        rgba(0,0,0,0.08);
+      --cl-text:          #1c2128;
+      --cl-text-muted:    #57606a;
+      --cl-nav-bg:        rgba(255,255,255,0.88);
+      --cl-shadow:        0 4px 20px rgba(0,0,0,0.10);
+      --cl-result-bg:     rgba(6, 214, 160, 0.06);
+    }
+
+    /* ── Base ────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family:      var(--cl-font-body);
+      font-weight:      400;
+      background-color: var(--cl-bg);
+      color:            var(--cl-text);
+      min-height:       100vh;
+      transition:       background-color var(--cl-transition),
+                        color var(--cl-transition);
+      padding-bottom:   4rem;
+    }
+
+    /* ── Navbar ──────────────────────────────────────────────── */
+    .cl-navbar {
+      background:   var(--cl-nav-bg) !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--cl-border);
+      padding:       0.6rem 0;
+      position:      sticky;
+      top:           0;
+      z-index:       1030;
+    }
+
+    .cl-navbar .navbar-brand {
+      font-family: var(--cl-font-display);
+      font-size:   1.35rem;
+      font-weight: 800;
+      color:       var(--cl-accent) !important;
+      letter-spacing: -0.5px;
+      display:     flex;
+      align-items: center;
+      gap:         0.4rem;
+    }
+
+    .cl-navbar .navbar-brand .brand-icon {
+      width:  32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--cl-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0d1117;
+      font-size: 0.9rem;
+    }
+
+    .cl-navbar .nav-link {
+      font-family:  var(--cl-font-body);
+      font-weight:  500;
+      font-size:    0.88rem;
+      color:        var(--cl-text-muted) !important;
+      padding:      0.45rem 0.75rem !important;
+      border-radius: var(--cl-radius-sm);
+      transition:   color var(--cl-transition),
+                    background var(--cl-transition);
+      letter-spacing: 0.2px;
+    }
+
+    .cl-navbar .nav-link:hover,
+    .cl-navbar .nav-link.active {
+      color:       var(--cl-accent) !important;
+      background:  var(--cl-accent-dim);
+    }
+
+    .cl-navbar .nav-link.active {
+      font-weight: 600;
+    }
+
+    /* Chip label untuk setiap algo */
+    .algo-chip {
+      display:     inline-flex;
+      align-items: center;
+      gap:         0.3rem;
+    }
+
+    .algo-chip .chip-num {
+      font-family:   var(--cl-font-mono);
+      font-size:     0.68rem;
+      background:    var(--cl-accent-dim);
+      color:         var(--cl-accent);
+      border-radius: 4px;
+      padding:       1px 5px;
+      line-height:   1.4;
+    }
+
+    /* ── Dark/Light Toggle ───────────────────────────────────── */
+    .theme-toggle {
+      width:  38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--cl-border);
+      background: var(--cl-surface-2);
+      color: var(--cl-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--cl-transition);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--cl-accent);
+      color:        var(--cl-accent);
+      background:   var(--cl-accent-dim);
+    }
+
+    /* ── Page Hero / Title ───────────────────────────────────── */
+    .page-hero {
+      padding: 2.5rem 0 1.5rem;
+    }
+
+    .page-hero .algo-badge {
+      display:     inline-flex;
+      align-items: center;
+      gap:         0.4rem;
+      font-family: var(--cl-font-mono);
+      font-size:   0.75rem;
+      font-weight: 600;
+      color:       var(--cl-accent);
+      background:  var(--cl-accent-dim);
+      border:      1px solid var(--cl-accent-glow);
+      border-radius: 20px;
+      padding:     0.25rem 0.75rem;
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    .page-hero h1 {
+      font-family:  var(--cl-font-display);
+      font-size:    2rem;
+      font-weight:  800;
+      line-height:  1.15;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    .page-hero p.lead {
+      color:     var(--cl-text-muted);
+      font-size: 0.95rem;
+      max-width: 520px;
+    }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .cl-card {
+      background:    var(--cl-surface);
+      border:        1px solid var(--cl-border);
+      border-radius: var(--cl-radius);
+      box-shadow:    var(--cl-shadow);
+      transition:    border-color var(--cl-transition),
+                     box-shadow var(--cl-transition);
+    }
+
+    .cl-card:hover {
+      border-color: var(--cl-accent-glow);
+    }
+
+    .cl-card .card-header {
+      background:    var(--cl-surface-2);
+      border-bottom: 1px solid var(--cl-border);
+      border-radius: var(--cl-radius) var(--cl-radius) 0 0 !important;
+      padding:       0.85rem 1.25rem;
+      font-family:   var(--cl-font-display);
+      font-weight:   700;
+      font-size:     0.95rem;
+      display:       flex;
+      align-items:   center;
+      gap:           0.5rem;
+    }
+
+    .cl-card .card-header .header-icon {
+      width:  30px;
+      height: 30px;
+      border-radius: 6px;
+      background:    var(--cl-accent-dim);
+      color:         var(--cl-accent);
+      display:       flex;
+      align-items:   center;
+      justify-content: center;
+      font-size:     0.9rem;
+    }
+
+    /* ── Forms ───────────────────────────────────────────────── */
+    .form-label {
+      font-weight:  500;
+      font-size:    0.88rem;
+      color:        var(--cl-text);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-label .label-hint {
+      font-weight:  400;
+      font-size:    0.78rem;
+      color:        var(--cl-text-muted);
+      margin-left:  0.3rem;
+    }
+
+    .form-control, .form-select {
+      background:   var(--cl-surface-2) !important;
+      border:       1px solid var(--cl-border) !important;
+      color:        var(--cl-text) !important;
+      border-radius: var(--cl-radius-sm) !important;
+      font-family:  var(--cl-font-body);
+      font-size:    0.92rem;
+      transition:   border-color var(--cl-transition),
+                    box-shadow var(--cl-transition);
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--cl-accent) !important;
+      box-shadow:   0 0 0 3px var(--cl-accent-glow) !important;
+      outline:      none !important;
+    }
+
+    .form-control::placeholder {
+      color: var(--cl-text-muted) !important;
+      opacity: 0.7;
+    }
+
+    textarea.form-control {
+      font-family:  var(--cl-font-mono);
+      font-size:    0.88rem;
+      resize:       vertical;
+      min-height:   100px;
+    }
+
+    /* Mode selector radio custom */
+    .mode-selector {
+      display:   flex;
+      gap:       0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .mode-option {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .mode-option input[type="radio"] { display: none; }
+
+    .mode-option label {
+      display:       flex;
+      align-items:   center;
+      justify-content: center;
+      gap:           0.4rem;
+      padding:       0.55rem 1rem;
+      border:        1.5px solid var(--cl-border);
+      border-radius: var(--cl-radius-sm);
+      cursor:        pointer;
+      font-weight:   500;
+      font-size:     0.88rem;
+      transition:    all var(--cl-transition);
+      background:    var(--cl-surface-2);
+      color:         var(--cl-text-muted);
+      user-select:   none;
+    }
+
+    .mode-option input[type="radio"]:checked + label {
+      border-color: var(--cl-accent);
+      background:   var(--cl-accent-dim);
+      color:        var(--cl-accent);
+    }
+
+    /* Submit button */
+    .btn-cipher {
+      background:    var(--cl-accent);
+      color:         #0d1117;
+      border:        none;
+      font-family:   var(--cl-font-body);
+      font-weight:   600;
+      font-size:     0.92rem;
+      padding:       0.6rem 1.5rem;
+      border-radius: var(--cl-radius-sm);
+      transition:    all var(--cl-transition);
+      display:       inline-flex;
+      align-items:   center;
+      gap:           0.4rem;
+    }
+
+    .btn-cipher:hover {
+      background:    #05c491;
+      color:         #0d1117;
+      transform:     translateY(-1px);
+      box-shadow:    0 4px 16px var(--cl-accent-glow);
+    }
+
+    .btn-cipher:active {
+      transform: translateY(0);
+    }
+
+    .btn-cipher:disabled {
+      opacity: 0.45;
+      cursor:  not-allowed;
+      transform: none;
+    }
+
+    /* ── Result Box ──────────────────────────────────────────── */
+    .result-box {
+      background:    var(--cl-result-bg);
+      border:        1px solid var(--cl-accent-glow);
+      border-radius: var(--cl-radius);
+      padding:       1.25rem 1.5rem;
+      margin-top:    1.5rem;
+      animation:     fadeSlideUp 0.4s ease both;
+    }
+
+    .result-box .result-label {
+      font-size:    0.75rem;
+      font-weight:  600;
+      font-family:  var(--cl-font-mono);
+      color:        var(--cl-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .result-box .result-text {
+      font-family:   var(--cl-font-mono);
+      font-size:     1.15rem;
+      font-weight:   600;
+      color:         var(--cl-text);
+      word-break:    break-all;
+      letter-spacing: 0.5px;
+    }
+
+    .result-box .result-copy {
+      cursor:    pointer;
+      color:     var(--cl-text-muted);
+      font-size: 0.85rem;
+      transition: color var(--cl-transition);
+    }
+    .result-box .result-copy:hover { color: var(--cl-accent); }
+
+    /* ── Steps Section ───────────────────────────────────────── */
+    .steps-section {
+      margin-top: 1.5rem;
+      animation:  fadeSlideUp 0.5s ease 0.1s both;
+    }
+
+    .steps-section .steps-title {
+      font-family:   var(--cl-font-display);
+      font-size:     1rem;
+      font-weight:   700;
+      margin-bottom: 0.75rem;
+      display:       flex;
+      align-items:   center;
+      gap:           0.4rem;
+    }
+
+    .steps-section .steps-title .steps-count {
+      font-family:  var(--cl-font-mono);
+      font-size:    0.72rem;
+      background:   var(--cl-accent-dim);
+      color:        var(--cl-accent);
+      border-radius: 20px;
+      padding:      2px 8px;
+    }
+
+    /* Step item */
+    .step-item {
+      display:       flex;
+      gap:           0.75rem;
+      padding:       0.65rem 0;
+      border-bottom: 1px solid var(--cl-border);
+      align-items:   flex-start;
+      font-size:     0.86rem;
+      line-height:   1.55;
+    }
+
+    .step-item:last-child { border-bottom: none; }
+
+    .step-num {
+      flex-shrink:   0;
+      width:         22px;
+      height:        22px;
+      border-radius: 50%;
+      background:    var(--cl-accent-dim);
+      color:         var(--cl-accent);
+      font-family:   var(--cl-font-mono);
+      font-size:     0.7rem;
+      font-weight:   600;
+      display:       flex;
+      align-items:   center;
+      justify-content: center;
+      margin-top:    2px;
+    }
+
+    .step-text {
+      color:       var(--cl-text);
+      font-family: var(--cl-font-mono);
+      font-size:   0.82rem;
+      white-space: pre-wrap;
+      word-break:  break-all;
+      flex: 1;
+    }
+
+    /* Matrix step */
+    .step-matrix-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 0.25rem;
+    }
+
+    .matrix-label {
+      font-family: var(--cl-font-mono);
+      font-size:   0.72rem;
+      color:       var(--cl-accent);
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .table-matrix {
+      font-family:    var(--cl-font-mono);
+      font-size:      0.88rem;
+      border-collapse: separate;
+      border-spacing: 0;
+      border-radius:  var(--cl-radius-sm);
+      overflow:       hidden;
+      margin-bottom:  0 !important;
+      min-width:      unset;
+      width:          auto;
+    }
+
+    .table-matrix thead th {
+      background:    var(--cl-accent-dim);
+      color:         var(--cl-accent);
+      font-weight:   700;
+      font-size:     0.75rem;
+      padding:       0.4rem 0.9rem;
+      border:        1px solid var(--cl-accent-glow) !important;
+      text-align:    center;
+    }
+
+    .table-matrix td {
+      padding:    0.5rem 1rem;
+      text-align: center;
+      border:     1px solid var(--cl-border) !important;
+      background: var(--cl-surface-2);
+      font-weight: 600;
+      min-width:  48px;
+    }
+
+    .table-matrix tr:hover td { background: var(--cl-accent-dim); }
+
+    /* ── Alert ──────────────────────────────────────────────── */
+    .cl-alert-error {
+      background:    rgba(239, 68, 68, 0.10);
+      border:        1px solid rgba(239, 68, 68, 0.30);
+      border-radius: var(--cl-radius);
+      padding:       1rem 1.25rem;
+      color:         #fca5a5;
+      font-size:     0.88rem;
+      font-family:   var(--cl-font-mono);
+      margin-top:    1.25rem;
+      animation:     fadeSlideUp 0.3s ease both;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .cl-footer {
+      text-align:    center;
+      padding:       2rem 0 1rem;
+      font-size:     0.8rem;
+      color:         var(--cl-text-muted);
+      border-top:    1px solid var(--cl-border);
+      margin-top:    3rem;
+    }
+
+    .cl-footer span {
+      color:       var(--cl-accent);
+      font-weight: 600;
+    }
+
+    /* ── Animations ──────────────────────────────────────────── */
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page-hero h1 { font-size: 1.6rem; }
+      .mode-option { min-width: 100px; }
+    }
+
+    /* ── Divider accent ──────────────────────────────────────── */
+    .accent-divider {
+      height:     2px;
+      background: linear-gradient(90deg, var(--cl-accent) 0%, transparent 100%);
+      border:     none;
+      margin:     0 0 1.5rem;
+      border-radius: 2px;
+    }
+  </style>
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════════════════════════ -->
+  <nav class="navbar navbar-expand-lg cl-navbar">
+    <div class="container">
+
+      <!-- Brand -->
+      <a class="navbar-brand" href="/">
+        <span class="brand-icon"><i class="bi bi-lock-fill"></i></span>
+        Cipher<span style="color:var(--cl-text)">Lab</span>
+      </a>
+
+      <!-- Toggler (mobile) -->
+      <div class="d-flex align-items-center gap-2 d-lg-none">
+        <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+          <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+        </button>
+        <button class="navbar-toggler border-0 p-1"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNav"
+                aria-label="Toggle navigation"
+                style="color: var(--cl-text-muted);">
+          <i class="bi bi-list fs-5"></i>
+        </button>
+      </div>
+
+      <!-- Nav links -->
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav mx-auto gap-1">
+
+          <li class="nav-item">
+            <a class="nav-link {% if active_page == 'caesar' %}active{% endif %}"
+               href="{{ url_for('caesar') }}">
+              <span class="algo-chip">
+                <span class="chip-num">01</span> Caesar
+              </span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link {% if active_page == 'vigenere' %}active{% endif %}"
+               href="{{ url_for('vigenere') }}">
+              <span class="algo-chip">
+                <span class="chip-num">02</span> Vigenère
+              </span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link {% if active_page == 'affine' %}active{% endif %}"
+               href="{{ url_for('affine') }}">
+              <span class="algo-chip">
+                <span class="chip-num">03</span> Affine
+              </span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link {% if active_page == 'hill' %}active{% endif %}"
+               href="{{ url_for('hill') }}">
+              <span class="algo-chip">
+                <span class="chip-num">04</span> Hill
+              </span>
+            </a>
+          </li>
+
+          <li class="nav-item">
+            <a class="nav-link {% if active_page == 'playfair' %}active{% endif %}"
+               href="{{ url_for('playfair') }}">
+              <span class="algo-chip">
+                <span class="chip-num">05</span> Playfair
+              </span>
+            </a>
+          </li>
+
+        </ul>
+
+        <!-- Theme toggle (desktop) -->
+        <div class="d-none d-lg-flex align-items-center">
+          <button class="theme-toggle" id="themeToggleDesktop" title="Toggle Dark/Light Mode">
+            <i class="bi bi-moon-stars-fill" id="themeIconDesktop"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════════════════════ -->
+  <main class="container py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════════════════════ -->
+  <footer class="cl-footer container">
+    <p>
+      <span>CipherLab</span> — Simulasi Kriptografi Klasik Edukatif &nbsp;·&nbsp;
+      Dibangun dengan <i class="bi bi-heart-fill" style="color:#ef4444;font-size:0.75rem;"></i>
+      menggunakan Python, Flask &amp; Bootstrap 5
+    </p>
+  </footer>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmQ+y+4aUGDSQyvUdp3lRGvf9ss"
+          crossorigin="anonymous"></script>
+
+  <!-- ── Dark/Light Mode Logic ─────────────────────────────── -->
+  <script>
+    (function () {
+      const STORAGE_KEY = 'cipherlab-theme';
+      const htmlEl      = document.documentElement;
+
+      /* Daftar semua toggle button & icon di halaman */
+      const toggleBtns = () => [
+        document.getElementById('themeToggle'),
+        document.getElementById('themeToggleDesktop'),
+      ].filter(Boolean);
+      const iconEls = () => [
+        document.getElementById('themeIcon'),
+        document.getElementById('themeIconDesktop'),
+      ].filter(Boolean);
+
+      function applyTheme(theme) {
+        htmlEl.setAttribute('data-bs-theme', theme);
+        localStorage.setItem(STORAGE_KEY, theme);
+
+        /* Update semua ikon */
+        iconEls().forEach(icon => {
+          if (theme === 'dark') {
+            icon.className = 'bi bi-moon-stars-fill';
+          } else {
+            icon.className = 'bi bi-sun-fill';
+          }
+        });
+      }
+
+      function toggleTheme() {
+        const current = htmlEl.getAttribute('data-bs-theme') || 'dark';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      }
+
+      /* Init: baca preferensi tersimpan, fallback ke system preference */
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        applyTheme(saved);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+      }
+
+      /* Pasang event listener setelah DOM siap */
+      document.addEventListener('DOMContentLoaded', function () {
+        toggleBtns().forEach(btn => btn.addEventListener('click', toggleTheme));
+      });
+    })();
+  </script>
+
+  <!-- ── Copy to clipboard helper ─────────────────────────── -->
+  <script>
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        /* Cari tombol copy dan ubah ikon sementara */
+        const btns = document.querySelectorAll('.result-copy');
+        btns.forEach(btn => {
+          const original = btn.innerHTML;
+          btn.innerHTML = '<i class="bi bi-check2"></i> Disalin!';
+          btn.style.color = 'var(--cl-accent)';
+          setTimeout(() => {
+            btn.innerHTML = original;
+            btn.style.color = '';
+          }, 1800);
+        });
+      }).catch(() => {
+        alert('Gagal menyalin: ' + text);
+      });
+    }
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

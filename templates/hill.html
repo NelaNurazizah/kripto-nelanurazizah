@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+
+{% block title %}Hill Cipher{% endblock %}
+
+{% set active_page = 'hill' %}
+
+{% block extra_head %}
+<style>
+  /* ── Matrix Input Grid ───────────────────────────────── */
+  .matrix-grid-wrapper {
+    display:       inline-flex;
+    flex-direction: column;
+    gap:           0.4rem;
+    position:      relative;
+    padding:       1rem;
+  }
+
+  /* Bracket dekoratif kiri-kanan matriks */
+  .matrix-grid-wrapper::before,
+  .matrix-grid-wrapper::after {
+    content:    '';
+    position:   absolute;
+    top:        0;
+    bottom:     0;
+    width:      8px;
+    border:     2px solid var(--cl-accent);
+    border-radius: 2px;
+    opacity:    0.6;
+  }
+
+  .matrix-grid-wrapper::before {
+    left:           0;
+    border-right:   none;
+    border-radius:  4px 0 0 4px;
+  }
+
+  .matrix-grid-wrapper::after {
+    right:          0;
+    border-left:    none;
+    border-radius:  0 4px 4px 0;
+  }
+
+  .matrix-row {
+    display: flex;
+    gap:     0.4rem;
+  }
+
+  .matrix-cell-input {
+    width:         64px;
+    height:        52px;
+    text-align:    center;
+    font-family:   var(--cl-font-mono);
+    font-weight:   700;
+    font-size:     1.1rem;
+    background:    var(--cl-surface-2) !important;
+    border:        1.5px solid var(--cl-border) !important;
+    border-radius: var(--cl-radius-sm) !important;
+    color:         var(--cl-text) !important;
+    transition:    all 0.2s;
+    padding:       0 !important;
+  }
+
+  .matrix-cell-input:focus {
+    border-color:  var(--cl-accent) !important;
+    box-shadow:    0 0 0 3px var(--cl-accent-glow) !important;
+    background:    var(--cl-accent-dim) !important;
+  }
+
+  .matrix-cell-input.is-invalid {
+    border-color: #ef4444 !important;
+  }
+
+  /* Dimension switcher */
+  .dim-switcher {
+    display:    flex;
+    gap:        0.5rem;
+    flex-wrap:  wrap;
+    margin-bottom: 1rem;
+  }
+
+  .dim-btn {
+    flex:          1;
+    min-width:     80px;
+    padding:       0.45rem 0.75rem;
+    border:        1.5px solid var(--cl-border);
+    border-radius: var(--cl-radius-sm);
+    background:    var(--cl-surface-2);
+    color:         var(--cl-text-muted);
+    font-family:   var(--cl-font-mono);
+    font-size:     0.88rem;
+    font-weight:   600;
+    cursor:        pointer;
+    transition:    all 0.2s;
+    text-align:    center;
+  }
+
+  .dim-btn:hover,
+  .dim-btn.active {
+    border-color: var(--cl-accent);
+    background:   var(--cl-accent-dim);
+    color:        var(--cl-accent);
+  }
+
+  /* Presets */
+  .preset-chips {
+    display:    flex;
+    flex-wrap:  wrap;
+    gap:        0.4rem;
+    margin-top: 0.6rem;
+  }
+
+  .preset-chip {
+    font-family:   var(--cl-font-mono);
+    font-size:     0.72rem;
+    padding:       3px 9px;
+    border:        1px solid var(--cl-border);
+    border-radius: 20px;
+    background:    var(--cl-surface-2);
+    color:         var(--cl-text-muted);
+    cursor:        pointer;
+    transition:    all 0.2s;
+  }
+
+  .preset-chip:hover {
+    border-color: var(--cl-accent);
+    color:        var(--cl-accent);
+    background:   var(--cl-accent-dim);
+  }
+
+  /* ── Steps Output ────────────────────────────────────── */
+  .steps-list {
+    display:        flex;
+    flex-direction: column;
+    gap:            0;
+  }
+
+  /* Langkah teks biasa */
+  .step-item {
+    display:     flex;
+    gap:         0.75rem;
+    padding:     0.6rem 0.25rem;
+    border-bottom: 1px solid var(--cl-border);
+    align-items: flex-start;
+    font-size:   0.84rem;
+    line-height: 1.55;
+  }
+
+  .step-item:last-child { border-bottom: none; }
+
+  /* Langkah matriks */
+  .step-matrix-item {
+    padding:      0.85rem 0.25rem;
+    border-bottom: 1px solid var(--cl-border);
+  }
+
+  .step-matrix-item:last-child { border-bottom: none; }
+
+  .matrix-label {
+    display:      flex;
+    align-items:  center;
+    gap:          0.4rem;
+    font-family:  var(--cl-font-mono);
+    font-size:    0.72rem;
+    font-weight:  700;
+    color:        var(--cl-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 0.5rem;
+  }
+
+  .table-matrix {
+    font-family:  var(--cl-font-mono);
+    font-size:    0.9rem;
+    border-collapse: separate !important;
+    border-spacing: 3px !important;
+    margin-bottom: 0 !important;
+    width:         auto !important;
+  }
+
+  .table-matrix td {
+    padding:       0.55rem 1.1rem;
+    text-align:    center;
+    font-weight:   700;
+    border-radius: var(--cl-radius-sm);
+    background:    var(--cl-surface-2);
+    border:        1px solid var(--cl-border) !important;
+    min-width:     52px;
+    color:         var(--cl-text);
+    transition:    background 0.2s;
+  }
+
+  .table-matrix tr:hover td {
+    background:  var(--cl-accent-dim);
+    color:       var(--cl-accent);
+    border-color: var(--cl-accent-glow) !important;
+  }
+
+  /* Matriks invers highlight berbeda */
+  .matrix-inv-highlight td {
+    background:  rgba(6,214,160,0.06);
+    border-color: var(--cl-accent-glow) !important;
+  }
+
+  /* Det badge */
+  .det-badge {
+    display:     inline-flex;
+    align-items: center;
+    gap:         0.3rem;
+    font-family: var(--cl-font-mono);
+    font-size:   0.75rem;
+    background:  var(--cl-surface-2);
+    border:      1px solid var(--cl-border);
+    border-radius: 4px;
+    padding:     2px 8px;
+    color:       var(--cl-text-muted);
+    margin-left: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ── Page Hero ──────────────────────────────────────────── -->
+<div class="page-hero">
+  <div class="algo-badge">
+    <i class="bi bi-grid-3x3-gap-fill"></i>
+    ALGORITMA 04
+  </div>
+  <h1>Hill Cipher</h1>
+  <p class="lead">
+    Kriptografi berbasis aljabar linear. Teks dibagi menjadi blok-blok vektor, lalu
+    dikalikan dengan matriks kunci modulo 26. Mendukung matriks 2×2 dan 3×3.
+  </p>
+</div>
+
+<hr class="accent-divider" />
+
+<div class="row g-4">
+
+  <!-- ══════════════════════════════════════════════════════
+       KOLOM KIRI — FORM INPUT
+  ═══════════════════════════════════════════════════════ -->
+  <div class="col-lg-5">
+    <div class="cl-card">
+      <div class="card-header">
+        <span class="header-icon"><i class="bi bi-grid-3x3-gap"></i></span>
+        Input &amp; Matriks Kunci
+      </div>
+      <div class="card-body p-4">
+
+        <form method="POST"
+              action="{{ url_for('hill') }}"
+              id="hillForm"
+              novalidate>
+
+          <!-- Teks Input -->
+          <div class="mb-4">
+            <label for="text" class="form-label">
+              Teks Input
+              <span class="label-hint">— hanya huruf yang diproses</span>
+            </label>
+            <textarea class="form-control"
+                      id="text"
+                      name="text"
+                      rows="3"
+                      placeholder="Ketik teks di sini… (misal: HELP)"
+                      required
+                      minlength="1">{{ request.form.get('text', '') }}</textarea>
+            <div class="invalid-feedback">Teks input tidak boleh kosong.</div>
+          </div>
+
+          <!-- Dimensi Matriks -->
+          <div class="mb-3">
+            <label class="form-label">
+              Dimensi Matriks Kunci
+            </label>
+            <div class="dim-switcher">
+              <button type="button" class="dim-btn active" id="btn2x2"
+                      onclick="setDimension(2)">
+                2×2
+              </button>
+              <button type="button" class="dim-btn" id="btn3x3"
+                      onclick="setDimension(3)">
+                3×3
+              </button>
+            </div>
+            <input type="hidden" name="dimension" id="dimensionInput" value="2" />
+          </div>
+
+          <!-- Matrix Input Grid -->
+          <div class="mb-3">
+            <label class="form-label">
+              Nilai Matriks Kunci (K)
+              <span class="label-hint">— integer, mod 26</span>
+            </label>
+
+            <!-- Grid 2x2 -->
+            <div id="grid2x2">
+              <div class="matrix-grid-wrapper">
+                <div class="matrix-row">
+                  <input type="number" class="matrix-cell-input form-control"
+                         name="m00" id="m00" value="{{ request.form.get('m00', 3) }}"
+                         placeholder="0" required />
+                  <input type="number" class="matrix-cell-input form-control"
+                         name="m01" id="m01" value="{{ request.form.get('m01', 3) }}"
+                         placeholder="0" required />
+                </div>
+                <div class="matrix-row">
+                  <input type="number" class="matrix-cell-input form-control"
+                         name="m10" id="m10" value="{{ request.form.get('m10', 2) }}"
+                         placeholder="0" required />
+                  <input type="number" class="matrix-cell-input form-control"
+                         name="m11" id="m11" value="{{ request.form.get('m11', 5) }}"
+                         placeholder="0" required />
+                </div>
+              </div>
+
+              <!-- Preset 2x2 -->
+              <div class="preset-chips">
+                <span style="font-size:0.72rem;color:var(--cl-text-muted);align-self:center;">
+                  Preset:
+                </span>
+                <span class="preset-chip" onclick="applyPreset2([[3,3],[2,5]])">
+                  [[3,3],[2,5]]
+                </span>
+                <span class="preset-chip" onclick="applyPreset2([[1,2],[3,4]])">
+                  [[1,2],[3,4]]
+                </span>
+                <span class="preset-chip" onclick="applyPreset2([[2,1],[5,3]])">
+                  [[2,1],[5,3]]
+                </span>
+              </div>
+            </div>
+
+            <!-- Grid 3x3 (tersembunyi secara default) -->
+            <div id="grid3x3" style="display:none;">
+              <div class="matrix-grid-wrapper">
+                {% for r in range(3) %}
+                <div class="matrix-row">
+                  {% for c in range(3) %}
+                  <input type="number"
+                         class="matrix-cell-input form-control"
+                         name="m{{ r }}{{ c }}"
+                         id="m{{ r }}{{ c }}"
+                         value="{{ request.form.get('m' ~ r ~ c, [6,24,1,13,16,10,20,17,15][r*3+c]) }}"
+                         placeholder="0"
+                         style="width:58px;" />
+                  {% endfor %}
+                </div>
+                {% endfor %}
+              </div>
+
+              <!-- Preset 3x3 -->
+              <div class="preset-chips">
+                <span style="font-size:0.72rem;color:var(--cl-text-muted);align-self:center;">
+                  Preset:
+                </span>
+                <span class="preset-chip"
+                      onclick="applyPreset3([[6,24,1],[13,16,10],[20,17,15]])">
+                  Hill klasik
+                </span>
+                <span class="preset-chip"
+                      onclick="applyPreset3([[1,2,3],[0,1,4],[5,6,0]])">
+                  Sederhana
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Mode -->
+          <div class="mb-4">
+            <label class="form-label">Mode Operasi</label>
+            <div class="mode-selector">
+              <div class="mode-option">
+                <input type="radio" id="modeEncrypt" name="mode"
+                       value="encrypt"
+                       {% if request.form.get('mode', 'encrypt') == 'encrypt' %}checked{% endif %}
+                       required />
+                <label for="modeEncrypt">
+                  <i class="bi bi-lock-fill"></i> Enkripsi
+                </label>
+              </div>
+              <div class="mode-option">
+                <input type="radio" id="modeDecrypt" name="mode"
+                       value="decrypt"
+                       {% if request.form.get('mode') == 'decrypt' %}checked{% endif %} />
+                <label for="modeDecrypt">
+                  <i class="bi bi-unlock-fill"></i> Dekripsi
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-cipher w-100" id="submitBtn">
+            <i class="bi bi-play-fill"></i>
+            Proses Hill Cipher
+          </button>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Rumus info -->
+    <div class="cl-card mt-3">
+      <div class="card-body px-4 py-3">
+        <p class="mb-1" style="font-size:0.82rem;color:var(--cl-text-muted);">
+          <i class="bi bi-info-circle text-info me-1"></i>
+          <strong>Rumus:</strong>
+        </p>
+        <p class="mb-1" style="font-family:var(--cl-font-mono);font-size:0.83rem;">
+          Enkripsi: <span style="color:var(--cl-accent);">C = K · P (mod 26)</span>
+        </p>
+        <p class="mb-1" style="font-family:var(--cl-font-mono);font-size:0.83rem;">
+          Dekripsi: <span style="color:var(--cl-accent);">P = K⁻¹ · C (mod 26)</span>
+        </p>
+        <p class="mb-0" style="font-size:0.78rem;color:var(--cl-text-muted);">
+          Syarat: det(K) harus koprima dengan 26.
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /col-lg-5 -->
+
+
+  <!-- ══════════════════════════════════════════════════════
+       KOLOM KANAN — OUTPUT + STEPS (dengan visualisasi matriks)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="col-lg-7">
+
+    {% if error %}
+    <div class="cl-alert-error">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if result is not none %}
+    <!-- Hasil -->
+    <div class="result-box">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="result-label">
+          <i class="bi bi-check-circle-fill me-1"></i>
+          Hasil {{ 'Enkripsi' if request.form.get('mode') == 'encrypt' else 'Dekripsi' }}
+        </div>
+        <span class="result-copy"
+              onclick="copyToClipboard('{{ result }}')"
+              title="Salin hasil">
+          <i class="bi bi-clipboard"></i> Salin
+        </span>
+      </div>
+      <div class="result-text">{{ result }}</div>
+      <div class="mt-2" style="font-size:0.78rem;color:var(--cl-text-muted);font-family:var(--cl-font-mono);">
+        {{ result | length }} karakter
+        &nbsp;·&nbsp; matriks {{ dimension }}×{{ dimension }}
+        &nbsp;·&nbsp; mode = {{ request.form.get('mode') }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if steps %}
+    <!-- Steps edukatif dengan visualisasi matriks -->
+    <div class="steps-section">
+      <div class="steps-title">
+        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
+        Riwayat Langkah Perhitungan
+        <span class="steps-count">{{ steps | length }} langkah</span>
+      </div>
+
+      <div class="cl-card">
+        <div class="card-body p-3">
+          <div class="steps-list">
+
+            {# ══ LOOP STEPS JINJA2 ══
+               Deteksi otomatis: jika step adalah list-of-lists (matriks),
+               render sebagai <table>. Jika string, render sebagai teks biasa.
+            #}
+            {% for step in steps %}
+
+              {# Cek apakah step ini adalah matriks (iterable, bukan string) #}
+              {% if step is iterable and step is not string %}
+
+                {# ── Render sebagai tabel matriks ── #}
+                <div class="step-matrix-item">
+
+                  {# Label kontekstual berdasarkan posisi #}
+                  {% if loop.index == 5 %}
+                    {# Matriks kunci utama (K) #}
+                    <div class="matrix-label">
+                      <i class="bi bi-grid-3x3"></i>
+                      Matriks Kunci K
+                      <span class="det-badge">
+                        {{ step | length }}×{{ step[0] | length }}
+                      </span>
+                    </div>
+                  {% elif loop.index > 5 and loop.previtem is iterable and loop.previtem is not string %}
+                    {# Matriks setelah matriks lain = kemungkinan K-invers #}
+                    <div class="matrix-label" style="color: #a78bfa;">
+                      <i class="bi bi-arrow-repeat"></i>
+                      Matriks Invers K⁻¹ (mod 26)
+                    </div>
+                  {% else %}
+                    <div class="matrix-label">
+                      <i class="bi bi-grid-3x3"></i>
+                      Matriks
+                      <span class="det-badge">
+                        {{ step | length }}×{{ step[0] | length }}
+                      </span>
+                    </div>
+                  {% endif %}
+
+                  <div class="step-matrix-wrapper">
+                    <table class="table-matrix">
+                      <tbody>
+                        {% for row in step %}
+                        <tr>
+                          {% for cell in row %}
+                          <td>{{ cell }}</td>
+                          {% endfor %}
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                </div>
+
+              {% else %}
+
+                {# ── Render sebagai langkah teks biasa ── #}
+                <div class="step-item">
+                  <span class="step-num">{{ loop.index }}</span>
+                  <span class="step-text">{{ step }}</span>
+                </div>
+
+              {% endif %}
+
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /steps-section -->
+    {% endif %}
+
+    {% if result is none and not error %}
+    <!-- Placeholder -->
+    <div class="cl-card mt-2">
+      <div class="card-body p-5 text-center">
+        <i class="bi bi-grid-3x3-gap"
+           style="font-size:2.5rem;color:var(--cl-accent);opacity:0.4;"></i>
+        <p class="mt-3 mb-0"
+           style="color:var(--cl-text-muted);font-size:0.9rem;">
+          Atur matriks kunci di sebelah kiri, lalu klik<br>
+          <strong style="color:var(--cl-text);">Proses Hill Cipher</strong>
+          untuk melihat hasil &amp; visualisasi matriks.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /col-lg-7 -->
+</div><!-- /row -->
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  /* ── Dimension Switcher ─────────────────────────────── */
+  let currentDim = {{ dimension if dimension else 2 }};
+
+  function setDimension(n) {
+    currentDim = n;
+    document.getElementById('dimensionInput').value = n;
+
+    document.getElementById('grid2x2').style.display = (n === 2) ? '' : 'none';
+    document.getElementById('grid3x3').style.display = (n === 3) ? '' : 'none';
+
+    document.getElementById('btn2x2').classList.toggle('active', n === 2);
+    document.getElementById('btn3x3').classList.toggle('active', n === 3);
+
+    /* Update required attribute */
+    const cells2 = document.querySelectorAll('#grid2x2 .matrix-cell-input');
+    const cells3 = document.querySelectorAll('#grid3x3 .matrix-cell-input');
+
+    cells2.forEach(c => { c.required = (n === 2); });
+    cells3.forEach(c => { c.required = (n === 3); });
+
+    checkFields();
+  }
+
+  /* ── Presets ────────────────────────────────────────── */
+  function applyPreset2(mat) {
+    const ids = ['m00','m01','m10','m11'];
+    const flat = mat.flat();
+    ids.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.value = flat[i];
+    });
+    checkFields();
+  }
+
+  function applyPreset3(mat) {
+    const flat = mat.flat();
+    let idx = 0;
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const el = document.getElementById(`m${r}${c}`);
+        if (el) el.value = flat[idx++];
+      }
+    }
+    checkFields();
+  }
+
+  /* ── Form Validation ────────────────────────────────── */
+  (function () {
+    const form      = document.getElementById('hillForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function checkFields() {
+      const textVal = document.getElementById('text').value.trim();
+      const modeOk  = document.querySelector('input[name="mode"]:checked');
+      const dim     = parseInt(document.getElementById('dimensionInput').value, 10);
+      const size    = dim * dim;
+
+      let matrixOk = true;
+      for (let r = 0; r < dim; r++) {
+        for (let c = 0; c < dim; c++) {
+          const el  = document.getElementById(`m${r}${c}`);
+          const val = el ? el.value.trim() : '';
+          if (val === '' || isNaN(parseInt(val, 10))) {
+            matrixOk = false;
+          }
+        }
+      }
+
+      submitBtn.disabled = !(textVal.length > 0 && modeOk && matrixOk);
+    }
+
+    window.checkFields = checkFields; // expose for setDimension
+
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+
+    /* Listen to all inputs */
+    document.getElementById('text').addEventListener('input', checkFields);
+    document.querySelectorAll('input[name="mode"]').forEach(r =>
+      r.addEventListener('change', checkFields)
+    );
+    document.querySelectorAll('.matrix-cell-input').forEach(inp =>
+      inp.addEventListener('input', checkFields)
+    );
+
+    /* Init dimension sesuai form yang di-submit sebelumnya */
+    const savedDim = parseInt('{{ dimension if dimension else 2 }}', 10);
+    setDimension(savedDim || 2);
+    checkFields();
+  })();
+
+  /* ── Highlight matriks invers di steps ──────────────── */
+  document.addEventListener('DOMContentLoaded', function () {
+    /* Cari tabel matriks ke-2 (jika ada) dan beri class khusus */
+    const matTables = document.querySelectorAll('.table-matrix');
+    if (matTables.length >= 2) {
+      matTables[1].classList.add('matrix-inv-highlight');
+    }
+  });
+</script>
+{% endblock %}

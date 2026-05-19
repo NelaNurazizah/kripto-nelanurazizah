@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+
+{% block title %}Caesar Cipher{% endblock %}
+
+{% set active_page = 'caesar' %}
+
+{% block extra_head %}
+<style>
+  /* Accordion step custom */
+  .steps-accordion .accordion-item {
+    background:    var(--cl-surface-2);
+    border:        1px solid var(--cl-border);
+    border-radius: var(--cl-radius-sm) !important;
+    margin-bottom: 0.4rem;
+    overflow:      hidden;
+  }
+
+  .steps-accordion .accordion-button {
+    background:  var(--cl-surface-2);
+    color:       var(--cl-text);
+    font-family: var(--cl-font-mono);
+    font-size:   0.82rem;
+    padding:     0.65rem 1rem;
+    box-shadow:  none !important;
+    border-radius: var(--cl-radius-sm) !important;
+  }
+
+  .steps-accordion .accordion-button::after {
+    filter: var(--bs-theme, none);
+  }
+
+  .steps-accordion .accordion-button:not(.collapsed) {
+    background: var(--cl-accent-dim);
+    color:      var(--cl-accent);
+  }
+
+  .steps-accordion .accordion-body {
+    padding:     0.75rem 1rem;
+    font-family: var(--cl-font-mono);
+    font-size:   0.83rem;
+    color:       var(--cl-text);
+    border-top:  1px solid var(--cl-border);
+    white-space: pre-wrap;
+    word-break:  break-all;
+    line-height: 1.6;
+  }
+
+  /* Shift preview indicator */
+  .shift-preview {
+    display:       flex;
+    align-items:   center;
+    gap:           0.5rem;
+    margin-top:    0.5rem;
+    font-family:   var(--cl-font-mono);
+    font-size:     0.78rem;
+    color:         var(--cl-text-muted);
+    flex-wrap:     wrap;
+  }
+
+  .shift-preview .alpha-row {
+    display:       flex;
+    gap:           2px;
+    flex-wrap:     wrap;
+  }
+
+  .shift-preview .alpha-char {
+    width:         20px;
+    height:        20px;
+    display:       flex;
+    align-items:   center;
+    justify-content: center;
+    border-radius: 3px;
+    font-size:     0.68rem;
+    font-weight:   600;
+    transition:    all 0.2s;
+  }
+
+  .shift-preview .alpha-char.plain {
+    background: var(--cl-surface-2);
+    color:      var(--cl-text-muted);
+    border:     1px solid var(--cl-border);
+  }
+
+  .shift-preview .alpha-char.shifted {
+    background: var(--cl-accent-dim);
+    color:      var(--cl-accent);
+    border:     1px solid var(--cl-accent-glow);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Hero ──────────────────────────────────────────── -->
+<div class="page-hero">
+  <div class="algo-badge">
+    <i class="bi bi-shuffle"></i>
+    ALGORITMA 01
+  </div>
+  <h1>Caesar Cipher</h1>
+  <p class="lead">
+    Teknik kriptografi substitusi paling klasik. Setiap huruf digeser sebanyak
+    <em>n</em> posisi dalam alfabet. Digunakan oleh Julius Caesar sejak abad ke-1 SM.
+  </p>
+</div>
+
+<hr class="accent-divider" />
+
+<div class="row g-4">
+
+  <!-- ══════════════════════════════════════════════════════
+       KOLOM KIRI — FORM INPUT
+  ═══════════════════════════════════════════════════════ -->
+  <div class="col-lg-5">
+    <div class="cl-card">
+      <div class="card-header">
+        <span class="header-icon"><i class="bi bi-pencil-square"></i></span>
+        Input &amp; Konfigurasi
+      </div>
+      <div class="card-body p-4">
+
+        <form method="POST"
+              action="{{ url_for('caesar') }}"
+              id="caesarForm"
+              novalidate>
+
+          <!-- Teks Input -->
+          <div class="mb-4">
+            <label for="text" class="form-label">
+              Teks Input
+              <span class="label-hint">— huruf besar/kecil, spasi, tanda baca dipertahankan</span>
+            </label>
+            <textarea class="form-control"
+                      id="text"
+                      name="text"
+                      rows="4"
+                      placeholder="Ketik atau tempel teks di sini…"
+                      required
+                      minlength="1">{{ request.form.get('text', '') }}</textarea>
+            <div class="invalid-feedback">Teks input tidak boleh kosong.</div>
+          </div>
+
+          <!-- Shift -->
+          <div class="mb-4">
+            <label for="shift" class="form-label">
+              Shift (Pergeseran Kunci)
+              <span class="label-hint">— nilai 1 s/d 25</span>
+            </label>
+            <input type="number"
+                   class="form-control"
+                   id="shift"
+                   name="shift"
+                   min="1"
+                   max="25"
+                   value="{{ request.form.get('shift', 3) }}"
+                   required
+                   placeholder="contoh: 3" />
+            <div class="invalid-feedback">Shift harus antara 1 dan 25.</div>
+
+            <!-- Alphabet preview (diupdate JS) -->
+            <div class="shift-preview mt-2" id="shiftPreview">
+              <span>A→</span>
+              <span id="previewChar" style="color:var(--cl-accent);font-weight:700;">D</span>
+              &nbsp;|&nbsp;
+              <span class="text-muted" id="previewHint">geser +3</span>
+            </div>
+          </div>
+
+          <!-- Mode -->
+          <div class="mb-4">
+            <label class="form-label">Mode Operasi</label>
+            <div class="mode-selector">
+
+              <div class="mode-option">
+                <input type="radio" id="modeEncrypt" name="mode"
+                       value="encrypt"
+                       {% if request.form.get('mode', 'encrypt') == 'encrypt' %}checked{% endif %}
+                       required />
+                <label for="modeEncrypt">
+                  <i class="bi bi-lock-fill"></i> Enkripsi
+                </label>
+              </div>
+
+              <div class="mode-option">
+                <input type="radio" id="modeDecrypt" name="mode"
+                       value="decrypt"
+                       {% if request.form.get('mode') == 'decrypt' %}checked{% endif %} />
+                <label for="modeDecrypt">
+                  <i class="bi bi-unlock-fill"></i> Dekripsi
+                </label>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="btn-cipher w-100" id="submitBtn">
+            <i class="bi bi-play-fill"></i>
+            Proses Caesar Cipher
+          </button>
+
+        </form>
+      </div><!-- /card-body -->
+    </div><!-- /cl-card -->
+
+    <!-- Info Card -->
+    <div class="cl-card mt-3">
+      <div class="card-body px-4 py-3">
+        <p class="mb-1" style="font-size:0.82rem;color:var(--cl-text-muted);">
+          <i class="bi bi-info-circle text-info me-1"></i>
+          <strong>Rumus:</strong>
+        </p>
+        <p class="mb-1" style="font-family:var(--cl-font-mono);font-size:0.83rem;color:var(--cl-text);">
+          Enkripsi: <span style="color:var(--cl-accent);">C = (P + k) mod 26</span>
+        </p>
+        <p class="mb-0" style="font-family:var(--cl-font-mono);font-size:0.83rem;color:var(--cl-text);">
+          Dekripsi: <span style="color:var(--cl-accent);">P = (C − k) mod 26</span>
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /col-lg-5 -->
+
+
+  <!-- ══════════════════════════════════════════════════════
+       KOLOM KANAN — OUTPUT HASIL + STEPS
+  ═══════════════════════════════════════════════════════ -->
+  <div class="col-lg-7">
+
+    {% if error %}
+    <!-- Error -->
+    <div class="cl-alert-error">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if result is not none %}
+    <!-- Hasil Enkripsi/Dekripsi -->
+    <div class="result-box">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="result-label">
+          <i class="bi bi-check-circle-fill me-1"></i>
+          Hasil {{ 'Enkripsi' if request.form.get('mode') == 'encrypt' else 'Dekripsi' }}
+        </div>
+        <span class="result-copy"
+              onclick="copyToClipboard('{{ result }}')"
+              title="Salin hasil">
+          <i class="bi bi-clipboard"></i> Salin
+        </span>
+      </div>
+      <div class="result-text">{{ result }}</div>
+      <div class="mt-2" style="font-size:0.78rem;color:var(--cl-text-muted);font-family:var(--cl-font-mono);">
+        {{ result | length }} karakter
+        &nbsp;·&nbsp; shift = {{ request.form.get('shift') }}
+        &nbsp;·&nbsp; mode = {{ request.form.get('mode') }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if steps %}
+    <!-- Langkah-langkah edukatif -->
+    <div class="steps-section">
+      <div class="steps-title">
+        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
+        Riwayat Langkah Perhitungan
+        <span class="steps-count">{{ steps | length }} langkah</span>
+      </div>
+
+      <!-- 4 langkah pertama tampil langsung, sisanya di accordion -->
+      {% set header_steps = steps[:4] %}
+      {% set detail_steps = steps[4:] %}
+
+      <!-- Header steps (selalu tampil) -->
+      <div class="cl-card mb-2">
+        <div class="card-body p-3">
+          {% for step in header_steps %}
+          <div class="step-item">
+            <span class="step-num">{{ loop.index }}</span>
+            <span class="step-text">{{ step }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if detail_steps %}
+      <!-- Detail per-karakter: accordion collapsible -->
+      <div class="accordion steps-accordion" id="stepsAccordion">
+        {% for step in detail_steps %}
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#step_{{ loop.index }}"
+                    aria-expanded="false">
+              <span class="step-num me-2">{{ loop.index + 4 }}</span>
+              {% if step | length > 70 %}
+                {{ step[:70] }}…
+              {% else %}
+                {{ step }}
+              {% endif %}
+            </button>
+          </h2>
+          <div id="step_{{ loop.index }}" class="accordion-collapse collapse">
+            <div class="accordion-body">{{ step }}</div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <!-- Expand All shortcut -->
+        <div class="text-end mt-2">
+          <button type="button"
+                  class="btn btn-sm btn-link p-0"
+                  style="color:var(--cl-text-muted);font-size:0.8rem;"
+                  id="expandAllBtn">
+            <i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah
+          </button>
+        </div>
+      </div>
+      {% endif %}
+
+    </div><!-- /steps-section -->
+    {% endif %}
+
+    <!-- Placeholder ketika belum ada hasil -->
+    {% if result is none and not error %}
+    <div class="cl-card mt-2">
+      <div class="card-body p-5 text-center">
+        <i class="bi bi-lock" style="font-size:2.5rem;color:var(--cl-accent);opacity:0.4;"></i>
+        <p class="mt-3 mb-0" style="color:var(--cl-text-muted);font-size:0.9rem;">
+          Isi form di sebelah kiri, lalu klik<br>
+          <strong style="color:var(--cl-text);">Proses Caesar Cipher</strong> untuk melihat hasil &amp; langkah-langkah.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /col-lg-7 -->
+</div><!-- /row -->
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  /* ── Form Validation HTML5 ──────────────────────────── */
+  (function () {
+    const form      = document.getElementById('caesarForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+
+    /* Disable tombol jika field kosong (real-time) */
+    function checkFields() {
+      const textVal  = document.getElementById('text').value.trim();
+      const shiftVal = document.getElementById('shift').value;
+      const shift    = parseInt(shiftVal, 10);
+      const modeOk   = document.querySelector('input[name="mode"]:checked');
+      const valid    = textVal.length > 0
+                    && !isNaN(shift) && shift >= 1 && shift <= 25
+                    && modeOk;
+      submitBtn.disabled = !valid;
+    }
+
+    document.getElementById('text').addEventListener('input',  checkFields);
+    document.getElementById('shift').addEventListener('input', checkFields);
+    document.querySelectorAll('input[name="mode"]').forEach(r =>
+      r.addEventListener('change', checkFields)
+    );
+    checkFields(); // init
+  })();
+
+  /* ── Shift Preview (A → ?) ──────────────────────────── */
+  (function () {
+    const shiftInput   = document.getElementById('shift');
+    const previewChar  = document.getElementById('previewChar');
+    const previewHint  = document.getElementById('previewHint');
+
+    function updatePreview() {
+      const s = parseInt(shiftInput.value, 10);
+      if (isNaN(s) || s < 1 || s > 25) {
+        previewChar.textContent = '?';
+        previewHint.textContent = '';
+        return;
+      }
+      const c = String.fromCharCode(((0 + s) % 26) + 65);
+      previewChar.textContent = c;
+      previewHint.textContent = `geser +${s}`;
+    }
+
+    shiftInput.addEventListener('input', updatePreview);
+    updatePreview();
+  })();
+
+  /* ── Expand All Accordion ───────────────────────────── */
+  const expandBtn = document.getElementById('expandAllBtn');
+  if (expandBtn) {
+    let expanded = false;
+    expandBtn.addEventListener('click', function () {
+      const collapses = document.querySelectorAll('#stepsAccordion .accordion-collapse');
+      collapses.forEach(el => {
+        const bsCol = bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+        expanded ? bsCol.hide() : bsCol.show();
+      });
+      expanded = !expanded;
+      expandBtn.innerHTML = expanded
+        ? '<i class="bi bi-arrows-collapse me-1"></i>Sembunyikan Detail'
+        : '<i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah';
+    });
+  }
+</script>
+{% endblock %}
