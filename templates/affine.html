@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+
+{% block title %}Affine Cipher{% endblock %}
+
+{% set active_page = 'affine' %}
+
+{% block extra_head %}
+<style>
+  /* Grid pilihan nilai a yang valid */
+  .valid-a-grid {
+    display:   flex;
+    flex-wrap: wrap;
+    gap:       4px;
+    margin-top: 0.5rem;
+  }
+
+  .a-val-chip {
+    font-family:  var(--cl-font-mono);
+    font-size:    0.78rem;
+    font-weight:  700;
+    padding:      3px 9px;
+    border:       1px solid var(--cl-border);
+    border-radius: 4px;
+    background:   var(--cl-surface-2);
+    color:        var(--cl-text-muted);
+    cursor:       pointer;
+    transition:   all 0.18s;
+  }
+
+  .a-val-chip:hover {
+    border-color: var(--cl-accent);
+    color:        var(--cl-accent);
+    background:   var(--cl-accent-dim);
+  }
+
+  .a-val-chip.selected {
+    border-color: var(--cl-accent);
+    background:   var(--cl-accent);
+    color:        #0d1117;
+  }
+
+  /* Slider visual untuk b */
+  .b-display {
+    font-family:  var(--cl-font-mono);
+    font-size:    1.15rem;
+    font-weight:  700;
+    color:        var(--cl-accent);
+    min-width:    2ch;
+    display:      inline-block;
+    text-align:   center;
+  }
+
+  input[type="range"].b-slider {
+    accent-color: var(--cl-accent);
+    width:        100%;
+    margin-top:   0.4rem;
+  }
+
+  /* Steps accordion */
+  .steps-accordion .accordion-item {
+    background:    var(--cl-surface-2);
+    border:        1px solid var(--cl-border);
+    border-radius: var(--cl-radius-sm) !important;
+    margin-bottom: 0.4rem;
+    overflow:      hidden;
+  }
+
+  .steps-accordion .accordion-button {
+    background:  var(--cl-surface-2);
+    color:       var(--cl-text);
+    font-family: var(--cl-font-mono);
+    font-size:   0.82rem;
+    padding:     0.65rem 1rem;
+    box-shadow:  none !important;
+    border-radius: var(--cl-radius-sm) !important;
+  }
+
+  .steps-accordion .accordion-button:not(.collapsed) {
+    background: var(--cl-accent-dim);
+    color:      var(--cl-accent);
+  }
+
+  .steps-accordion .accordion-body {
+    padding:     0.75rem 1rem;
+    font-family: var(--cl-font-mono);
+    font-size:   0.83rem;
+    color:       var(--cl-text);
+    border-top:  1px solid var(--cl-border);
+    white-space: pre-wrap;
+    word-break:  break-all;
+    line-height: 1.6;
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="page-hero">
+  <div class="algo-badge">
+    <i class="bi bi-calculator"></i>
+    ALGORITMA 03
+  </div>
+  <h1>Affine Cipher</h1>
+  <p class="lead">
+    Perluasan Caesar menggunakan fungsi linear. Setiap huruf P dienkripsi
+    menjadi C = (a·P + b) mod 26, dengan syarat <em>a</em> harus koprima
+    dengan 26 agar dekripsi dimungkinkan.
+  </p>
+</div>
+
+<hr class="accent-divider" />
+
+<div class="row g-4">
+
+  <!-- KOLOM KIRI — FORM -->
+  <div class="col-lg-5">
+    <div class="cl-card">
+      <div class="card-header">
+        <span class="header-icon"><i class="bi bi-calculator"></i></span>
+        Input &amp; Parameter
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('affine') }}"
+              id="affineForm" novalidate>
+
+          <!-- Teks Input -->
+          <div class="mb-4">
+            <label for="text" class="form-label">
+              Teks Input
+              <span class="label-hint">— huruf besar/kecil dipertahankan</span>
+            </label>
+            <textarea class="form-control" id="text" name="text"
+                      rows="4" placeholder="Ketik teks di sini…"
+                      required minlength="1">{{ request.form.get('text', '') }}</textarea>
+            <div class="invalid-feedback">Teks input tidak boleh kosong.</div>
+          </div>
+
+          <!-- Parameter a -->
+          <div class="mb-4">
+            <label for="a" class="form-label">
+              Parameter <strong style="color:var(--cl-accent);">a</strong>
+              <span class="label-hint">— harus koprima dengan 26</span>
+            </label>
+            <input type="number" class="form-control" id="a" name="a"
+                   value="{{ request.form.get('a', 7) }}"
+                   min="1" max="25" required
+                   placeholder="misal: 7" />
+            <div class="invalid-feedback">
+              Nilai a tidak valid. Pilih dari daftar di bawah.
+            </div>
+
+            <!-- Chip grid nilai a yang valid -->
+            <div style="margin-top:0.5rem;">
+              <div style="font-size:0.72rem;color:var(--cl-text-muted);font-family:var(--cl-font-mono);margin-bottom:0.3rem;">
+                <i class="bi bi-check2-square me-1" style="color:var(--cl-accent);"></i>
+                Nilai a yang valid (gcd(a, 26) = 1):
+              </div>
+              <div class="valid-a-grid" id="validAGrid">
+                {% if valid_a_values %}
+                  {% for v in valid_a_values %}
+                  <span class="a-val-chip
+                               {% if request.form.get('a', '7')|string == v|string %}selected{% endif %}"
+                        data-val="{{ v }}"
+                        onclick="selectA({{ v }})">
+                    {{ v }}
+                  </span>
+                  {% endfor %}
+                {% else %}
+                  {% for v in [1,3,5,7,9,11,15,17,19,21,23,25] %}
+                  <span class="a-val-chip
+                               {% if request.form.get('a', '7')|string == v|string %}selected{% endif %}"
+                        data-val="{{ v }}"
+                        onclick="selectA({{ v }})">
+                    {{ v }}
+                  </span>
+                  {% endfor %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Parameter b dengan slider -->
+          <div class="mb-4">
+            <label for="b" class="form-label">
+              Parameter <strong style="color:var(--cl-accent);">b</strong>
+              <span class="label-hint">— konstanta geser (0–25)</span>
+            </label>
+            <div class="d-flex align-items-center gap-3">
+              <input type="range" class="b-slider" id="bSlider"
+                     min="0" max="25" step="1"
+                     value="{{ request.form.get('b', 3) }}"
+                     oninput="syncB(this.value)" />
+              <span class="b-display" id="bDisplay">
+                {{ request.form.get('b', 3) }}
+              </span>
+            </div>
+            <!-- Hidden input yang dikirim ke server -->
+            <input type="hidden" id="b" name="b"
+                   value="{{ request.form.get('b', 3) }}" required />
+          </div>
+
+          <!-- Preview rumus real-time -->
+          <div class="mb-4 p-3"
+               style="background:var(--cl-surface-2);border:1px solid var(--cl-border);
+                      border-radius:var(--cl-radius-sm);font-family:var(--cl-font-mono);
+                      font-size:0.85rem;">
+            <div style="color:var(--cl-text-muted);font-size:0.72rem;margin-bottom:0.3rem;">
+              PREVIEW RUMUS:
+            </div>
+            Enkripsi: C = (<span id="prevA" style="color:var(--cl-accent);font-weight:700;">7</span>·P
+            + <span id="prevB" style="color:var(--cl-accent);font-weight:700;">3</span>) mod 26
+          </div>
+
+          <!-- Mode -->
+          <div class="mb-4">
+            <label class="form-label">Mode Operasi</label>
+            <div class="mode-selector">
+              <div class="mode-option">
+                <input type="radio" id="modeEncrypt" name="mode" value="encrypt"
+                       {% if request.form.get('mode', 'encrypt') == 'encrypt' %}checked{% endif %}
+                       required />
+                <label for="modeEncrypt"><i class="bi bi-lock-fill"></i> Enkripsi</label>
+              </div>
+              <div class="mode-option">
+                <input type="radio" id="modeDecrypt" name="mode" value="decrypt"
+                       {% if request.form.get('mode') == 'decrypt' %}checked{% endif %} />
+                <label for="modeDecrypt"><i class="bi bi-unlock-fill"></i> Dekripsi</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-cipher w-100" id="submitBtn">
+            <i class="bi bi-play-fill"></i> Proses Affine Cipher
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="cl-card mt-3">
+      <div class="card-body px-4 py-3">
+        <p class="mb-1" style="font-size:0.82rem;color:var(--cl-text-muted);">
+          <i class="bi bi-info-circle text-info me-1"></i> <strong>Rumus:</strong>
+        </p>
+        <p class="mb-1" style="font-family:var(--cl-font-mono);font-size:0.83rem;color:var(--cl-text);">
+          Enkripsi: <span style="color:var(--cl-accent);">C = (a·P + b) mod 26</span>
+        </p>
+        <p class="mb-1" style="font-family:var(--cl-font-mono);font-size:0.83rem;color:var(--cl-text);">
+          Dekripsi: <span style="color:var(--cl-accent);">P = a⁻¹·(C − b) mod 26</span>
+        </p>
+        <p class="mb-0" style="font-size:0.78rem;color:var(--cl-text-muted);">
+          Syarat: gcd(a, 26) = 1 agar a⁻¹ mod 26 ada.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- KOLOM KANAN — OUTPUT -->
+  <div class="col-lg-7">
+
+    {% if error %}
+    <div class="cl-alert-error">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if result is not none %}
+    <div class="result-box">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="result-label">
+          <i class="bi bi-check-circle-fill me-1"></i>
+          Hasil {{ 'Enkripsi' if request.form.get('mode') == 'encrypt' else 'Dekripsi' }}
+        </div>
+        <span class="result-copy" onclick="copyToClipboard('{{ result }}')" title="Salin">
+          <i class="bi bi-clipboard"></i> Salin
+        </span>
+      </div>
+      <div class="result-text">{{ result }}</div>
+      <div class="mt-2" style="font-size:0.78rem;color:var(--cl-text-muted);font-family:var(--cl-font-mono);">
+        {{ result | length }} karakter
+        &nbsp;·&nbsp; a={{ request.form.get('a') }}, b={{ request.form.get('b') }}
+        &nbsp;·&nbsp; mode = {{ request.form.get('mode') }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if steps %}
+    <div class="steps-section">
+      <div class="steps-title">
+        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
+        Riwayat Langkah Perhitungan
+        <span class="steps-count">{{ steps | length }} langkah</span>
+      </div>
+
+      {% set header_steps = steps[:5] %}
+      {% set detail_steps = steps[5:] %}
+
+      <div class="cl-card mb-2">
+        <div class="card-body p-3">
+          {% for step in header_steps %}
+          <div class="step-item">
+            <span class="step-num">{{ loop.index }}</span>
+            <span class="step-text">{{ step }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if detail_steps %}
+      <div class="accordion steps-accordion" id="stepsAccordion">
+        {% for step in detail_steps %}
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#step_{{ loop.index }}"
+                    aria-expanded="false">
+              <span class="step-num me-2">{{ loop.index + 5 }}</span>
+              {% if step | length > 70 %}{{ step[:70] }}…{% else %}{{ step }}{% endif %}
+            </button>
+          </h2>
+          <div id="step_{{ loop.index }}" class="accordion-collapse collapse">
+            <div class="accordion-body">{{ step }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        <div class="text-end mt-2">
+          <button type="button" class="btn btn-sm btn-link p-0"
+                  style="color:var(--cl-text-muted);font-size:0.8rem;" id="expandAllBtn">
+            <i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah
+          </button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if result is none and not error %}
+    <div class="cl-card mt-2">
+      <div class="card-body p-5 text-center">
+        <i class="bi bi-calculator" style="font-size:2.5rem;color:var(--cl-accent);opacity:0.4;"></i>
+        <p class="mt-3 mb-0" style="color:var(--cl-text-muted);font-size:0.9rem;">
+          Isi form di sebelah kiri, lalu klik<br>
+          <strong style="color:var(--cl-text);">Proses Affine Cipher</strong>
+          untuk melihat hasil &amp; langkah-langkah.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  /* ── Sync slider b ──────────────────────────────────── */
+  function syncB(val) {
+    document.getElementById('bDisplay').textContent = val;
+    document.getElementById('b').value = val;
+    document.getElementById('prevB').textContent = val;
+    checkFields();
+  }
+
+  /* ── Pilih nilai a dari chip ────────────────────────── */
+  function selectA(val) {
+    document.getElementById('a').value = val;
+    document.getElementById('prevA').textContent = val;
+    // Update chip highlight
+    document.querySelectorAll('.a-val-chip').forEach(chip => {
+      chip.classList.toggle('selected', parseInt(chip.dataset.val) === val);
+    });
+    checkFields();
+  }
+
+  /* ── Validasi & submit guard ────────────────────────── */
+  const VALID_A = [1,3,5,7,9,11,15,17,19,21,23,25];
+
+  function checkFields() {
+    const textOk = document.getElementById('text').value.trim().length > 0;
+    const aVal   = parseInt(document.getElementById('a').value, 10);
+    const aOk    = !isNaN(aVal) && VALID_A.includes(aVal);
+    const modeOk = document.querySelector('input[name="mode"]:checked');
+    document.getElementById('submitBtn').disabled = !(textOk && aOk && modeOk);
+  }
+
+  (function () {
+    const form = document.getElementById('affineForm');
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+      form.classList.add('was-validated');
+    });
+
+    document.getElementById('text').addEventListener('input', checkFields);
+    document.getElementById('a').addEventListener('input', function () {
+      const v = parseInt(this.value, 10);
+      document.getElementById('prevA').textContent = isNaN(v) ? '?' : v;
+      // Sync chip highlight
+      document.querySelectorAll('.a-val-chip').forEach(chip => {
+        chip.classList.toggle('selected', parseInt(chip.dataset.val) === v);
+      });
+      checkFields();
+    });
+    document.querySelectorAll('input[name="mode"]').forEach(r =>
+      r.addEventListener('change', checkFields)
+    );
+
+    // Init preview
+    const initA = parseInt(document.getElementById('a').value, 10);
+    const initB = parseInt(document.getElementById('b').value,  10);
+    document.getElementById('prevA').textContent = isNaN(initA) ? 7 : initA;
+    document.getElementById('prevB').textContent = isNaN(initB) ? 3 : initB;
+    document.getElementById('bDisplay').textContent = isNaN(initB) ? 3 : initB;
+
+    checkFields();
+  })();
+
+  /* ── Expand All ─────────────────────────────────────── */
+  const expandBtn = document.getElementById('expandAllBtn');
+  if (expandBtn) {
+    let expanded = false;
+    expandBtn.addEventListener('click', function () {
+      document.querySelectorAll('#stepsAccordion .accordion-collapse').forEach(el => {
+        const bs = bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+        expanded ? bs.hide() : bs.show();
+      });
+      expanded = !expanded;
+      expandBtn.innerHTML = expanded
+        ? '<i class="bi bi-arrows-collapse me-1"></i>Sembunyikan Detail'
+        : '<i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah';
+    });
+  }
+</script>
+{% endblock %}

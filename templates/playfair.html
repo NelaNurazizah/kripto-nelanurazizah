@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}Playfair Cipher{% endblock %}
+
+{% set active_page = 'playfair' %}
+
+{% block extra_head %}
+<style>
+  /* Matriks 5x5 di steps output */
+  .step-matrix-item {
+    padding:       0.85rem 0.25rem;
+    border-bottom: 1px solid var(--cl-border);
+  }
+
+  .step-matrix-item:last-child { border-bottom: none; }
+
+  .matrix-label {
+    display:      flex;
+    align-items:  center;
+    gap:          0.4rem;
+    font-family:  var(--cl-font-mono);
+    font-size:    0.72rem;
+    font-weight:  700;
+    color:        var(--cl-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 0.5rem;
+  }
+
+  .table-matrix {
+    font-family:     var(--cl-font-mono);
+    font-size:       0.9rem;
+    border-collapse: separate !important;
+    border-spacing:  3px !important;
+    margin-bottom:   0 !important;
+    width:           auto !important;
+  }
+
+  .table-matrix td {
+    padding:       0.5rem 0.85rem;
+    text-align:    center;
+    font-weight:   700;
+    border-radius: var(--cl-radius-sm);
+    background:    var(--cl-surface-2);
+    border:        1px solid var(--cl-border) !important;
+    min-width:     44px;
+    color:         var(--cl-text);
+    transition:    background 0.15s;
+  }
+
+  .table-matrix tr:hover td {
+    background:  var(--cl-accent-dim);
+    color:       var(--cl-accent);
+    border-color: var(--cl-accent-glow) !important;
+  }
+
+  /* Accordion steps */
+  .steps-accordion .accordion-item {
+    background:    var(--cl-surface-2);
+    border:        1px solid var(--cl-border);
+    border-radius: var(--cl-radius-sm) !important;
+    margin-bottom: 0.4rem;
+    overflow:      hidden;
+  }
+
+  .steps-accordion .accordion-button {
+    background:  var(--cl-surface-2);
+    color:       var(--cl-text);
+    font-family: var(--cl-font-mono);
+    font-size:   0.82rem;
+    padding:     0.65rem 1rem;
+    box-shadow:  none !important;
+    border-radius: var(--cl-radius-sm) !important;
+  }
+
+  .steps-accordion .accordion-button:not(.collapsed) {
+    background: var(--cl-accent-dim);
+    color:      var(--cl-accent);
+  }
+
+  .steps-accordion .accordion-body {
+    padding:     0.75rem 1rem;
+    font-family: var(--cl-font-mono);
+    font-size:   0.83rem;
+    color:       var(--cl-text);
+    border-top:  1px solid var(--cl-border);
+    white-space: pre-wrap;
+    word-break:  break-all;
+    line-height: 1.6;
+  }
+
+  /* Catatan Playfair */
+  .playfair-note {
+    font-size:    0.78rem;
+    color:        var(--cl-text-muted);
+    font-family:  var(--cl-font-mono);
+    background:   var(--cl-surface-2);
+    border:       1px solid var(--cl-border);
+    border-left:  3px solid var(--cl-accent);
+    border-radius: var(--cl-radius-sm);
+    padding:      0.6rem 0.85rem;
+    margin-top:   0.6rem;
+    line-height:  1.6;
+  }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="page-hero">
+  <div class="algo-badge">
+    <i class="bi bi-table"></i>
+    ALGORITMA 05
+  </div>
+  <h1>Playfair Cipher</h1>
+  <p class="lead">
+    Enkripsi digraf (pasangan huruf) menggunakan matriks kunci 5×5.
+    I dan J dianggap karakter yang sama. Salah satu cipher pertama
+    yang mengenkripsi dua huruf sekaligus, ditemukan oleh Charles Wheatstone (1854).
+  </p>
+</div>
+
+<hr class="accent-divider" />
+
+<div class="row g-4">
+
+  <!-- KOLOM KIRI — FORM -->
+  <div class="col-lg-5">
+    <div class="cl-card">
+      <div class="card-header">
+        <span class="header-icon"><i class="bi bi-table"></i></span>
+        Input &amp; Kunci
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('playfair') }}"
+              id="playfairForm" novalidate>
+
+          <!-- Teks Input -->
+          <div class="mb-4">
+            <label for="text" class="form-label">
+              Teks Input
+              <span class="label-hint">— hanya huruf yang diproses</span>
+            </label>
+            <textarea class="form-control" id="text" name="text"
+                      rows="4" placeholder="Ketik teks di sini… (misal: HELLO WORLD)"
+                      required minlength="1">{{ request.form.get('text', '') }}</textarea>
+            <div class="invalid-feedback">Teks input tidak boleh kosong.</div>
+
+            <div class="playfair-note">
+              <i class="bi bi-info-circle me-1"></i>
+              Spasi &amp; angka diabaikan. J otomatis diganti I.
+              Huruf kembar (misal: LL) akan disisipkan X di antara keduanya.
+            </div>
+          </div>
+
+          <!-- Kunci -->
+          <div class="mb-4">
+            <label for="key" class="form-label">
+              Kata Kunci
+              <span class="label-hint">— membangun matriks 5×5</span>
+            </label>
+            <input type="text" class="form-control" id="key" name="key"
+                   value="{{ request.form.get('key', '') }}"
+                   placeholder="misal: MONARCHY"
+                   required pattern="[A-Za-z]+"
+                   title="Kunci hanya boleh berisi huruf" />
+            <div class="invalid-feedback">
+              Kunci wajib diisi dan hanya boleh berisi huruf.
+            </div>
+
+            <!-- Contoh kunci populer -->
+            <div style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:4px;">
+              <span style="font-size:0.72rem;color:var(--cl-text-muted);align-self:center;
+                           font-family:var(--cl-font-mono);">
+                Contoh:
+              </span>
+              {% for preset in ['MONARCHY','KEYWORD','PLAYFAIR','SECRET'] %}
+              <span onclick="document.getElementById('key').value='{{ preset }}';checkFields();"
+                    style="font-family:var(--cl-font-mono);font-size:0.72rem;padding:2px 8px;
+                           border:1px solid var(--cl-border);border-radius:4px;cursor:pointer;
+                           background:var(--cl-surface-2);color:var(--cl-text-muted);
+                           transition:all 0.15s;"
+                    onmouseover="this.style.color='var(--cl-accent)';this.style.borderColor='var(--cl-accent)';"
+                    onmouseout="this.style.color='';this.style.borderColor='';">
+                {{ preset }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Mode -->
+          <div class="mb-4">
+            <label class="form-label">Mode Operasi</label>
+            <div class="mode-selector">
+              <div class="mode-option">
+                <input type="radio" id="modeEncrypt" name="mode" value="encrypt"
+                       {% if request.form.get('mode', 'encrypt') == 'encrypt' %}checked{% endif %}
+                       required />
+                <label for="modeEncrypt"><i class="bi bi-lock-fill"></i> Enkripsi</label>
+              </div>
+              <div class="mode-option">
+                <input type="radio" id="modeDecrypt" name="mode" value="decrypt"
+                       {% if request.form.get('mode') == 'decrypt' %}checked{% endif %} />
+                <label for="modeDecrypt"><i class="bi bi-unlock-fill"></i> Dekripsi</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-cipher w-100" id="submitBtn">
+            <i class="bi bi-play-fill"></i> Proses Playfair Cipher
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="cl-card mt-3">
+      <div class="card-body px-4 py-3">
+        <p class="mb-1" style="font-size:0.82rem;color:var(--cl-text-muted);">
+          <i class="bi bi-info-circle text-info me-1"></i> <strong>Aturan enkripsi digraf:</strong>
+        </p>
+        <div style="font-size:0.8rem;color:var(--cl-text);line-height:1.7;">
+          <div>
+            <span style="color:var(--cl-accent);font-weight:700;font-family:var(--cl-font-mono);">
+              Baris sama:
+            </span>
+            geser kolom → kanan (enkripsi) / kiri (dekripsi)
+          </div>
+          <div>
+            <span style="color:var(--cl-accent);font-weight:700;font-family:var(--cl-font-mono);">
+              Kolom sama:
+            </span>
+            geser baris → bawah (enkripsi) / atas (dekripsi)
+          </div>
+          <div>
+            <span style="color:var(--cl-accent);font-weight:700;font-family:var(--cl-font-mono);">
+              Persegi panjang:
+            </span>
+            tukar sudut kolom (enkripsi &amp; dekripsi)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KOLOM KANAN — OUTPUT + MATRIKS 5×5 + STEPS -->
+  <div class="col-lg-7">
+
+    {% if error %}
+    <div class="cl-alert-error">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if result is not none %}
+    <div class="result-box">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="result-label">
+          <i class="bi bi-check-circle-fill me-1"></i>
+          Hasil {{ 'Enkripsi' if request.form.get('mode') == 'encrypt' else 'Dekripsi' }}
+        </div>
+        <span class="result-copy" onclick="copyToClipboard('{{ result }}')" title="Salin">
+          <i class="bi bi-clipboard"></i> Salin
+        </span>
+      </div>
+      <div class="result-text">{{ result }}</div>
+      <div class="mt-2" style="font-size:0.78rem;color:var(--cl-text-muted);font-family:var(--cl-font-mono);">
+        {{ result | length }} karakter
+        &nbsp;·&nbsp; kunci = "{{ request.form.get('key', '')|upper }}"
+        &nbsp;·&nbsp; mode = {{ request.form.get('mode') }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if steps %}
+    <div class="steps-section">
+      <div class="steps-title">
+        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
+        Riwayat Langkah Perhitungan
+        <span class="steps-count">{{ steps | length }} langkah</span>
+      </div>
+
+      <div class="cl-card">
+        <div class="card-body p-3">
+
+          {#
+            Loop utama: deteksi otomatis apakah step adalah matriks (list-of-lists)
+            atau teks biasa. Sama persis dengan logika di hill.html.
+          #}
+          {% set step_counter = namespace(n=0) %}
+
+          {% for step in steps %}
+
+            {% if step is iterable and step is not string %}
+
+              {# ── Matriks 5×5 Playfair ── #}
+              <div class="step-matrix-item">
+                <div class="matrix-label">
+                  <i class="bi bi-table"></i>
+                  Matriks Playfair 5×5
+                  <span style="font-family:var(--cl-font-mono);font-size:0.7rem;
+                               background:var(--cl-accent-dim);color:var(--cl-accent);
+                               border:1px solid var(--cl-accent-glow);border-radius:4px;
+                               padding:1px 6px;margin-left:0.3rem;">
+                    I = J
+                  </span>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table class="table-matrix">
+                    <tbody>
+                      {% for row in step %}
+                      <tr>
+                        {% for cell in row %}
+                        <td>{{ cell }}</td>
+                        {% endfor %}
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            {% else %}
+
+              {# ── Teks langkah biasa ── #}
+              {% set step_counter.n = step_counter.n + 1 %}
+
+              {# Langkah proses digraf masuk accordion (lebih dari 8 langkah pertama) #}
+              {% if step_counter.n <= 8 %}
+              <div class="step-item">
+                <span class="step-num">{{ step_counter.n }}</span>
+                <span class="step-text">{{ step }}</span>
+              </div>
+              {% else %}
+              {# Accordion untuk detail per digraf #}
+              <div class="accordion steps-accordion mt-2" id="stepsAccordion"
+                   style="{% if step_counter.n > 9 %}display:none;{% endif %}">
+              </div>
+              {% endif %}
+
+            {% endif %}
+
+          {% endfor %}
+
+          {# Accordion untuk langkah detail per digraf (step_counter.n > 8) #}
+          {% set digraf_steps = [] %}
+          {% set text_step_count = namespace(n=0) %}
+          {% for step in steps %}
+            {% if step is not iterable or step is string %}
+              {% set text_step_count.n = text_step_count.n + 1 %}
+              {% if text_step_count.n > 8 %}
+                {% if digraf_steps.append(step) %}{% endif %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+
+          {% if digraf_steps %}
+          <div class="accordion steps-accordion mt-2" id="digrafAccordion">
+            {% for step in digraf_steps %}
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#dstep_{{ loop.index }}"
+                        aria-expanded="false">
+                  <span class="step-num me-2">{{ loop.index + 8 }}</span>
+                  {% if step | length > 65 %}{{ step[:65] }}…{% else %}{{ step }}{% endif %}
+                </button>
+              </h2>
+              <div id="dstep_{{ loop.index }}" class="accordion-collapse collapse">
+                <div class="accordion-body">{{ step }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="text-end mt-2">
+            <button type="button" class="btn btn-sm btn-link p-0"
+                    style="color:var(--cl-text-muted);font-size:0.8rem;" id="expandAllBtn">
+              <i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah
+            </button>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if result is none and not error %}
+    <div class="cl-card mt-2">
+      <div class="card-body p-5 text-center">
+        <i class="bi bi-table" style="font-size:2.5rem;color:var(--cl-accent);opacity:0.4;"></i>
+        <p class="mt-3 mb-0" style="color:var(--cl-text-muted);font-size:0.9rem;">
+          Isi form di sebelah kiri, lalu klik<br>
+          <strong style="color:var(--cl-text);">Proses Playfair Cipher</strong>
+          untuk melihat hasil, matriks 5×5, &amp; langkah-langkah.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_scripts %}
+<script>
+  /* ── Form Validation ────────────────────────────────── */
+  function checkFields() {
+    const textOk = document.getElementById('text').value.trim().length > 0;
+    const keyRaw = document.getElementById('key').value.trim();
+    const keyOk  = keyRaw.length > 0 && /[A-Za-z]/.test(keyRaw);
+    const modeOk = document.querySelector('input[name="mode"]:checked');
+    document.getElementById('submitBtn').disabled = !(textOk && keyOk && modeOk);
+  }
+
+  (function () {
+    const form = document.getElementById('playfairForm');
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+      form.classList.add('was-validated');
+    });
+
+    ['text','key'].forEach(id =>
+      document.getElementById(id).addEventListener('input', checkFields)
+    );
+    document.querySelectorAll('input[name="mode"]').forEach(r =>
+      r.addEventListener('change', checkFields)
+    );
+    checkFields();
+  })();
+
+  /* ── Expand All ─────────────────────────────────────── */
+  const expandBtn = document.getElementById('expandAllBtn');
+  if (expandBtn) {
+    let expanded = false;
+    expandBtn.addEventListener('click', function () {
+      document.querySelectorAll('#digrafAccordion .accordion-collapse').forEach(el => {
+        const bs = bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+        expanded ? bs.hide() : bs.show();
+      });
+      expanded = !expanded;
+      expandBtn.innerHTML = expanded
+        ? '<i class="bi bi-arrows-collapse me-1"></i>Sembunyikan Detail'
+        : '<i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah';
+    });
+  }
+</script>
+{% endblock %}
