@@ -221,7 +221,6 @@
 
 {% block content %}
 
-<!-- ── Page Hero ──────────────────────────────────────────── -->
 <div class="page-hero">
   <div class="algo-badge">
     <i class="bi bi-grid-3x3-gap-fill"></i>
@@ -238,9 +237,6 @@
 
 <div class="row g-4">
 
-  <!-- ══════════════════════════════════════════════════════
-       KOLOM KIRI — FORM INPUT
-  ═══════════════════════════════════════════════════════ -->
   <div class="col-lg-5">
     <div class="cl-card">
       <div class="card-header">
@@ -254,7 +250,6 @@
               id="hillForm"
               novalidate>
 
-          <!-- Teks Input -->
           <div class="mb-4">
             <label for="text" class="form-label">
               Teks Input
@@ -270,7 +265,6 @@
             <div class="invalid-feedback">Teks input tidak boleh kosong.</div>
           </div>
 
-          <!-- Dimensi Matriks -->
           <div class="mb-3">
             <label class="form-label">
               Dimensi Matriks Kunci
@@ -288,14 +282,12 @@
             <input type="hidden" name="dimension" id="dimensionInput" value="2" />
           </div>
 
-          <!-- Matrix Input Grid -->
           <div class="mb-3">
             <label class="form-label">
               Nilai Matriks Kunci (K)
               <span class="label-hint">— integer, mod 26</span>
             </label>
 
-            <!-- Grid 2x2 -->
             <div id="grid2x2">
               <div class="matrix-grid-wrapper">
                 <div class="matrix-row">
@@ -316,7 +308,6 @@
                 </div>
               </div>
 
-              <!-- Preset 2x2 -->
               <div class="preset-chips">
                 <span style="font-size:0.72rem;color:var(--cl-text-muted);align-self:center;">
                   Preset:
@@ -333,7 +324,6 @@
               </div>
             </div>
 
-            <!-- Grid 3x3 (tersembunyi secara default) -->
             <div id="grid3x3" style="display:none;">
               <div class="matrix-grid-wrapper">
                 {% for r in range(3) %}
@@ -351,7 +341,6 @@
                 {% endfor %}
               </div>
 
-              <!-- Preset 3x3 -->
               <div class="preset-chips">
                 <span style="font-size:0.72rem;color:var(--cl-text-muted);align-self:center;">
                   Preset:
@@ -369,7 +358,6 @@
 
           </div>
 
-          <!-- Mode -->
           <div class="mb-4">
             <label class="form-label">Mode Operasi</label>
             <div class="mode-selector">
@@ -393,7 +381,6 @@
             </div>
           </div>
 
-          <!-- Submit -->
           <button type="submit" class="btn-cipher w-100" id="submitBtn">
             <i class="bi bi-play-fill"></i>
             Proses Hill Cipher
@@ -403,7 +390,6 @@
       </div>
     </div>
 
-    <!-- Rumus info -->
     <div class="cl-card mt-3">
       <div class="card-body px-4 py-3">
         <p class="mb-1" style="font-size:0.82rem;color:var(--cl-text-muted);">
@@ -422,13 +408,7 @@
       </div>
     </div>
 
-  </div><!-- /col-lg-5 -->
-
-
-  <!-- ══════════════════════════════════════════════════════
-       KOLOM KANAN — OUTPUT + STEPS (dengan visualisasi matriks)
-  ═══════════════════════════════════════════════════════ -->
-  <div class="col-lg-7">
+  </div><div class="col-lg-7">
 
     {% if error %}
     <div class="cl-alert-error">
@@ -437,7 +417,6 @@
     {% endif %}
 
     {% if result is not none %}
-    <!-- Hasil -->
     <div class="result-box">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="result-label">
@@ -460,92 +439,79 @@
     {% endif %}
 
     {% if steps %}
-    <!-- Steps edukatif dengan visualisasi matriks -->
-    <div class="steps-section">
-      <div class="steps-title">
-        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
-        Riwayat Langkah Perhitungan
-        <span class="steps-count">{{ steps | length }} langkah</span>
-      </div>
+    <div class="mt-4">
+      <button class="btn-cipher w-100 d-flex justify-content-between align-items-center" 
+              style="background: var(--cl-surface-2); color: var(--cl-text); border: 1px solid var(--cl-border);"
+              type="button" 
+              data-bs-toggle="collapse" 
+              data-bs-target="#allStepsCollapse" 
+              aria-expanded="false" 
+              aria-controls="allStepsCollapse"
+              id="btnShowSteps">
+        <span><i class="bi bi-list-ol me-2" style="color:var(--cl-accent);"></i> Lihat Langkah Perhitungan</span>
+        <i class="bi bi-chevron-down toggle-icon" style="transition: transform 0.3s;"></i>
+      </button>
 
-      <div class="cl-card">
-        <div class="card-body p-3">
-          <div class="steps-list">
+      <div class="collapse mt-2" id="allStepsCollapse">
+        <div class="cl-card">
+          <div class="card-body p-3">
+            <div class="steps-list">
 
-            {# ══ LOOP STEPS JINJA2 ══
-               Deteksi otomatis: jika step adalah list-of-lists (matriks),
-               render sebagai <table>. Jika string, render sebagai teks biasa.
-            #}
-            {% for step in steps %}
+              {# ══ LOOP STEPS JINJA2 ══ #}
+              {% for step in steps %}
 
-              {# Cek apakah step ini adalah matriks (iterable, bukan string) #}
-              {% if step is iterable and step is not string %}
+                {% if step is iterable and step is not string %}
+                  {# ── Render sebagai tabel matriks ── #}
+                  <div class="step-matrix-item step-hidden" style="--delay: {{ loop.index * 0.12 }}s;">
+                    
+                    {% if loop.index == 5 %}
+                      <div class="matrix-label">
+                        <i class="bi bi-grid-3x3"></i> Matriks Kunci K
+                        <span class="det-badge">{{ step | length }}×{{ step[0] | length }}</span>
+                      </div>
+                    {% elif loop.index > 5 and loop.previtem is iterable and loop.previtem is not string %}
+                      <div class="matrix-label" style="color: #a78bfa;">
+                        <i class="bi bi-arrow-repeat"></i> Matriks Invers K⁻¹ (mod 26)
+                      </div>
+                    {% else %}
+                      <div class="matrix-label">
+                        <i class="bi bi-grid-3x3"></i> Matriks
+                        <span class="det-badge">{{ step | length }}×{{ step[0] | length }}</span>
+                      </div>
+                    {% endif %}
 
-                {# ── Render sebagai tabel matriks ── #}
-                <div class="step-matrix-item">
-
-                  {# Label kontekstual berdasarkan posisi #}
-                  {% if loop.index == 5 %}
-                    {# Matriks kunci utama (K) #}
-                    <div class="matrix-label">
-                      <i class="bi bi-grid-3x3"></i>
-                      Matriks Kunci K
-                      <span class="det-badge">
-                        {{ step | length }}×{{ step[0] | length }}
-                      </span>
-                    </div>
-                  {% elif loop.index > 5 and loop.previtem is iterable and loop.previtem is not string %}
-                    {# Matriks setelah matriks lain = kemungkinan K-invers #}
-                    <div class="matrix-label" style="color: #a78bfa;">
-                      <i class="bi bi-arrow-repeat"></i>
-                      Matriks Invers K⁻¹ (mod 26)
-                    </div>
-                  {% else %}
-                    <div class="matrix-label">
-                      <i class="bi bi-grid-3x3"></i>
-                      Matriks
-                      <span class="det-badge">
-                        {{ step | length }}×{{ step[0] | length }}
-                      </span>
-                    </div>
-                  {% endif %}
-
-                  <div class="step-matrix-wrapper">
-                    <table class="table-matrix">
-                      <tbody>
-                        {% for row in step %}
-                        <tr>
-                          {% for cell in row %}
-                          <td>{{ cell }}</td>
+                    <div class="step-matrix-wrapper">
+                      <table class="table-matrix">
+                        <tbody>
+                          {% for row in step %}
+                          <tr>
+                            {% for cell in row %}
+                            <td>{{ cell }}</td>
+                            {% endfor %}
+                          </tr>
                           {% endfor %}
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
-                </div>
+                {% else %}
+                  {# ── Render sebagai langkah teks biasa ── #}
+                  <div class="step-item step-hidden" style="--delay: {{ loop.index * 0.12 }}s;">
+                    <span class="step-num">{{ loop.index }}</span>
+                    <span class="step-text">{{ step }}</span>
+                  </div>
+                {% endif %}
 
-              {% else %}
-
-                {# ── Render sebagai langkah teks biasa ── #}
-                <div class="step-item">
-                  <span class="step-num">{{ loop.index }}</span>
-                  <span class="step-text">{{ step }}</span>
-                </div>
-
-              {% endif %}
-
-            {% endfor %}
+              {% endfor %}
+            </div>
           </div>
         </div>
       </div>
-
-    </div><!-- /steps-section -->
+    </div>
     {% endif %}
 
     {% if result is none and not error %}
-    <!-- Placeholder -->
     <div class="cl-card mt-2">
       <div class="card-body p-5 text-center">
         <i class="bi bi-grid-3x3-gap"
@@ -560,10 +526,7 @@
     </div>
     {% endif %}
 
-  </div><!-- /col-lg-7 -->
-</div><!-- /row -->
-
-{% endblock %}
+  </div></div>{% endblock %}
 
 
 {% block extra_scripts %}
@@ -670,6 +633,21 @@
     const matTables = document.querySelectorAll('.table-matrix');
     if (matTables.length >= 2) {
       matTables[1].classList.add('matrix-inv-highlight');
+    }
+  });
+
+  /* ── Animasi Halus Saat Dropdown Dibuka ───────────────── */
+  document.addEventListener("DOMContentLoaded", function() {
+    const stepsCollapse = document.getElementById('allStepsCollapse');
+    if (stepsCollapse) {
+      stepsCollapse.addEventListener('show.bs.collapse', function () {
+        const items = stepsCollapse.querySelectorAll('.step-hidden');
+        items.forEach(item => {
+          item.style.animation = 'none';
+          item.offsetHeight; /* Trigger reflow */
+          item.style.animation = `fadeSlideUp 0.5s ease forwards ${item.style.getPropertyValue('--delay')}`;
+        });
+      });
     }
   });
 </script>

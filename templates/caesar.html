@@ -86,6 +86,15 @@
     color:      var(--cl-accent);
     border:     1px solid var(--cl-accent-glow);
   }
+  /* Menyembunyikan step sebelum dropdown dibuka */
+  .step-hidden {
+    opacity: 0;
+  }
+  
+  /* Animasi untuk ikon panah berputar */
+  #btnShowSteps[aria-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+  }
 </style>
 {% endblock %}
 
@@ -236,7 +245,7 @@
 
     {% if result is not none %}
     <!-- Hasil Enkripsi/Dekripsi -->
-    <div class="result-box">
+    <div class="result-box" id="resultSection">
       <div class="d-flex justify-content-between align-items-center mb-2">
         <div class="result-label">
           <i class="bi bi-check-circle-fill me-1"></i>
@@ -258,79 +267,30 @@
     {% endif %}
 
     {% if steps %}
-    <!-- Langkah-langkah edukatif -->
-    <div class="steps-section">
-      <div class="steps-title">
-        <i class="bi bi-list-ol" style="color:var(--cl-accent);"></i>
-        Riwayat Langkah Perhitungan
-        <span class="steps-count">{{ steps | length }} langkah</span>
-      </div>
+    <div class="mt-4">
+      <button class="btn-cipher w-100 d-flex justify-content-between align-items-center" 
+              style="background: var(--cl-surface-2); color: var(--cl-text); border: 1px solid var(--cl-border);"
+              type="button" 
+              data-bs-toggle="collapse" 
+              data-bs-target="#allStepsCollapse" 
+              aria-expanded="false" 
+              aria-controls="allStepsCollapse"
+              id="btnShowSteps">
+        <span><i class="bi bi-list-ol me-2" style="color:var(--cl-accent);"></i> Lihat Langkah Perhitungan</span>
+        <i class="bi bi-chevron-down toggle-icon" style="transition: transform 0.3s;"></i>
+      </button>
 
-      <!-- 4 langkah pertama tampil langsung, sisanya di accordion -->
-      {% set header_steps = steps[:4] %}
-      {% set detail_steps = steps[4:] %}
-
-      <!-- Header steps (selalu tampil) -->
-      <div class="cl-card mb-2">
-        <div class="card-body p-3">
-          {% for step in header_steps %}
-          <div class="step-item">
-            <span class="step-num">{{ loop.index }}</span>
-            <span class="step-text">{{ step }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      {% if detail_steps %}
-      <!-- Detail per-karakter: accordion collapsible -->
-      <div class="accordion steps-accordion" id="stepsAccordion">
-        {% for step in detail_steps %}
-        <div class="accordion-item">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#step_{{ loop.index }}"
-                    aria-expanded="false">
-              <span class="step-num me-2">{{ loop.index + 4 }}</span>
-              {% if step | length > 70 %}
-                {{ step[:70] }}…
-              {% else %}
-                {{ step }}
-              {% endif %}
-            </button>
-          </h2>
-          <div id="step_{{ loop.index }}" class="accordion-collapse collapse">
-            <div class="accordion-body">{{ step }}</div>
+      <div class="collapse mt-2" id="allStepsCollapse">
+        <div class="cl-card">
+          <div class="card-body p-3">
+            {% for step in steps %}
+            <div class="step-item step-hidden" style="--delay: {{ loop.index * 0.12 }}s;">
+              <span class="step-num">{{ loop.index }}</span>
+              <span class="step-text">{{ step }}</span>
+            </div>
+            {% endfor %}
           </div>
         </div>
-        {% endfor %}
-
-        <!-- Expand All shortcut -->
-        <div class="text-end mt-2">
-          <button type="button"
-                  class="btn btn-sm btn-link p-0"
-                  style="color:var(--cl-text-muted);font-size:0.8rem;"
-                  id="expandAllBtn">
-            <i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah
-          </button>
-        </div>
-      </div>
-      {% endif %}
-
-    </div><!-- /steps-section -->
-    {% endif %}
-
-    <!-- Placeholder ketika belum ada hasil -->
-    {% if result is none and not error %}
-    <div class="cl-card mt-2">
-      <div class="card-body p-5 text-center">
-        <i class="bi bi-lock" style="font-size:2.5rem;color:var(--cl-accent);opacity:0.4;"></i>
-        <p class="mt-3 mb-0" style="color:var(--cl-text-muted);font-size:0.9rem;">
-          Isi form di sebelah kiri, lalu klik<br>
-          <strong style="color:var(--cl-text);">Proses Caesar Cipher</strong> untuk melihat hasil &amp; langkah-langkah.
-        </p>
       </div>
     </div>
     {% endif %}
@@ -414,5 +374,32 @@
         : '<i class="bi bi-arrows-expand me-1"></i>Tampilkan Semua Langkah';
     });
   }
+  /* ── Auto-Scroll ke Hasil ───────────────────────────── */
+  document.addEventListener("DOMContentLoaded", function() {
+    const target = document.getElementById('resultSection');
+    if (target) {
+      // Tunggu 0.1 detik agar halaman selesai render, lalu scroll halus ke bawah
+      setTimeout(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  });
+  /* ── Animasi Halus Saat Dropdown Dibuka ───────────────── */
+  document.addEventListener("DOMContentLoaded", function() {
+    const stepsCollapse = document.getElementById('allStepsCollapse');
+    if (stepsCollapse) {
+      stepsCollapse.addEventListener('show.bs.collapse', function () {
+        // Ambil semua elemen langkah
+        const items = stepsCollapse.querySelectorAll('.step-hidden');
+        items.forEach(item => {
+          // Reset animasi (jaga-jaga kalau ditutup lalu dibuka lagi)
+          item.style.animation = 'none';
+          item.offsetHeight; /* Trigger reflow */
+          // Terapkan animasi fadeSlideUp dengan delay dari properti CSS
+          item.style.animation = `fadeSlideUp 0.5s ease forwards ${item.style.getPropertyValue('--delay')}`;
+        });
+      });
+    }
+  });
 </script>
 {% endblock %}
